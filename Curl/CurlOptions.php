@@ -15,7 +15,15 @@ namespace Zeroem\CurlBundle\Curl;
  */
 final class CurlOptions
 {
+    /**
+     * @var array Associtative array of constant value => constant type constrain
+     */
     static private $option_value_types = array();
+
+    /**
+     * @var array Associative array of constant value => constant name
+     */
+    static private $option_value_names = array();
 
     /**
      * Checks which cURL constants is defined and loads them as valid options
@@ -141,8 +149,28 @@ final class CurlOptions
         foreach ($options as $option => $type) {
             if (defined($option)) {
                 static::$option_value_types[constant($option)] = $type;
+                static::$option_value_names[constant($option)] = $option;
             }
         }
+    }
+
+    /**
+     * Fetch option constant realname from a given curl option value
+     *
+     * @param int $option curl option value CURLOPT_*
+     * @return string curl option constant name
+     */
+    static public function getName($option)
+    {
+        if (!static::$option_value_types) {
+            static::loadOptions();
+        }
+
+        if (!array_key_exists($option, static::$option_value_names)) {
+            throw new \OutOfRangeException('Illegal index ' . $option);
+        }
+
+        return static::$option_value_names[$option];
     }
 
     /**
@@ -179,7 +207,7 @@ final class CurlOptions
             $result = static::checkType($value, static::$option_value_types[$option]);
 
             if(!$result && $throw) {
-                throw new \InvalidArgumentException("Invalid value for the given cURL option");
+                throw new \InvalidArgumentException("Invalid value for the given cURL option " . self::$option_value_names[$option]);
             }
 
             return $result;
@@ -188,6 +216,13 @@ final class CurlOptions
         }
     }
 
+    /**
+     * Check a value against a given string type
+     *
+     * @param mixed $value option value to check against the input type
+     * @param string $type a given type in bool, string, int, resource, callable, ..
+     * @return bool true if type ok, false otherwise
+     */
     static private function checkType($value, $type) {
 
         $result = false;
